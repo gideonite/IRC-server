@@ -3,20 +3,28 @@
 
 (def request-parser
   (insta/parser   ;; TODO plop this into its own file
-    "message = (':' prefix SPACE)? command params crlf
-     prefix = servername | nick ('!' user)? ('@' host)?
-     SPACE = #'\\s+'
-     command = letter+ | number number number
-     params = SPACE (':' trailing | middle params)?
-     crlf = #'[\r\n]'
+                "
+                message    =  [ ':' prefix SP ] command [ params ] crlf
+                prefix     =  servername / ( nickname [ [ '!' user ] '@' host ] )
+                command    =  1*ALPHA / 3DIGIT
+                params     =  *14( SP middle ) [ SP ':' trailing ]
+                           / 14( SP middle ) [ SP [ ':' ] trailing ]
 
-     servername = #'.*'
-     nick = #'\\p{ASCII}{1,9}'
-     user = #'\\p{ASCII}*'
-     host = #'\\p{ASCII}*'
+                servername = 14*ALPHA
+                nickname = servername
+                user = nickname
+                host = user
 
-     letter = #'[a-zA-z]'
-     number = #'\\d'
+                nospcrlfcl =  %x01-09 / %x0B-0C / %x0E-1F / %x21-39 / %x3B-FF
+                middle     =  nospcrlfcl *( ':' / nospcrlfcl )
+                trailing   =  *( ':' / ' ' / nospcrlfcl )
+                crlf       =  CR LF
+                "
+                :input-format :abnf))
 
-     middle = #'[\\p{ASCII}^[:]][\\p{ASCII}[^\r\n]]+'
-     trailing = #'[\\p{ASCII}[^\r\n]]*'"))
+(comment
+  (request-parser "NICK\r\n")
+  (request-parser "NICK gideon\r\n")
+  (request-parser "USER gideon gideon localhost :Gideon\r\n")
+  (request-parser "join #foobar\r\n")
+  )
