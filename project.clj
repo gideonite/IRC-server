@@ -7,5 +7,5 @@
                  [instaparse "1.2.6"]
                  [aleph "0.3.0"]
                  [lamina "0.5.0"]
-                 [gloss "0.2.2"]
-                 ])
+                 [gloss "0.2.2"]]
+  :profiles {:dev {:source-paths ["dev"]}})
