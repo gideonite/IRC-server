@@ -1,8 +1,8 @@
-message     =  [ ':' prefix SP ] command [ params ] crlf
+message     =  [ ':' prefix <SP> ] command [ params ] <crlf>
 prefix      =  nickname
 command     =  1*ALPHA / 3DIGIT
-params      =  *14( SP middle ) [ SP ':' trailing ]
-            /  14( SP middle ) [ SP [ ':' ] trailing ]
+params      =  *14( <1*SP> middle ) [ <SP> ':' trailing ]
+            /  14( <SP> middle ) [ <SP> [ ':' ] trailing ]
 
 nickname    =  ( ALPHA / special ) *8( ALPHA / DIGIT / special / '-' )
 
@@ -10,7 +10,7 @@ middle      =  nospcrlfcl *( ':' / nospcrlfcl )
 trailing    =  *( ':' / ' ' / nospcrlfcl )
 
 crlf        =  CR LF
-nospcrlfcl  =  %x01-09 / %x0B-0C / %x0E-1F / %x21-39 / %x3B-FF
+nospcrlfcl  =  %x01-09 / %x0B-0C / %x0E-1F / %x21-39 / %x3B-FF / %x2B
     ; any octet  except NUL, CR, LF, ' ' and ':'
 special     =  %x5B-60 / %x7B-7D
     ; '[', '', '\', '`', '_', '^', '{', '|', '']}

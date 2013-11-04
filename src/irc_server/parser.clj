@@ -1,9 +1,27 @@
 (ns irc-server.parser
   (:require [instaparse.core :as insta]))
 
-(def request-parser
-  (insta/parser "resources/parser-rules.abnf"
-                :input-format :abnf))
+(defn
+  keyword->concat
+  "return a ( fn: coll -> [:keyword (str (rest coll))] )"
+  [kw]
+  (fn [& cs] [kw (apply str cs)])
+  )
+
+(defn request-parser
+  [string]
+  (insta/transform
+    {:ALPHA identity
+     :command (keyword->concat :command)
+     :middle (keyword->concat :middle)
+     :trailing (keyword->concat :trailing)
+     :SP identity
+     :CR identity
+     :nospcrlfcl identity
+     }
+    ((insta/parser "resources/parser-rules.abnf"
+                  :input-format :abnf)
+       string)))
 
 (comment
   (request-parser "NICK gideon\r\n")
@@ -16,5 +34,6 @@
   (request-parser "ping nickname\r\n")
   (request-parser "query you\r\n")
   (request-parser "quit\r\n")
+  (request-parser "MODE  +i\r\n")
   ;; ...
   )

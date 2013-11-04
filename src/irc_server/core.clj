@@ -9,9 +9,7 @@
 
 (defn handler [ch client-info]
   (receive-all ch
-               ;(fn [msg] (enqueue ch "001"))
-               #(enqueue ch (str "You said: " % "\n"))
-               ;#(enqueue ch (request-parser %))
+               (fn [msg] (println (request-parser (str msg "\r\n"))) (enqueue ch "001"))
                ))
 
 (defn start-server

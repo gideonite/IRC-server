@@ -19,12 +19,13 @@
 
 (defn restart []
   (stop)
-  (require 'irc-server.core :reload-all)
+  (require 'irc-server.core :reload)
+  (require 'irc-server.parser :reload)
   (start))
 
 ;;
 ;; REPL MAIN
 ;;
 
-(println "\n")
 (start)
+(println "\n")
