@@ -1,46 +1,16 @@
-message     =  [ ':' prefix SP ] command target [ params ] crlf
-prefix      =  servername / ( nickname [ [ '!' username ] '@' host ] )
+message     =  [ ':' prefix SP ] command [ params ] crlf
+prefix      =  nickname
 command     =  1*ALPHA / 3DIGIT
 params      =  *14( SP middle ) [ SP ':' trailing ]
             /  14( SP middle ) [ SP [ ':' ] trailing ]
 
-target      =  nickname / servername
-msgtarget   =  msgto *( ',' msgto )
-msgto       =  channel / ( username [ '%' host ] '@' servername )
-msgto       / ( username '%' host ) / targetmask
-msgto       / nickname / ( nickname '!' username '@' host )
-channel     =  ( '#' / '+' / ( '!' channelid ) / '&' ) chanstring [ ':' chanstring ]
-servername  =  hostname
-host        =  hostname / hostaddr
-hostname    =  shortname *( '.' shortname )
-username    =  1*(CHAR)
-shortname   =  ( ALPHA / DIGIT ) *( ALPHA / DIGIT / '-' ) *( ALPHA / DIGIT )
-hostaddr    =  ip4addr / ip6addr
-ip4addr     =  1*3DIGIT '.' 1*3DIGIT '.' 1*3DIGIT '.' 1*3DIGIT
-ip6addr     =  1*HEXDIG 7( ':' 1*HEXDIG )
-ip6addr     / '0:0:0:0:0:' ( '0' / 'FFFF' ) ':' ip4addr
 nickname    =  ( ALPHA / special ) *8( ALPHA / DIGIT / special / '-' )
-targetmask  =  ( '$' / '#' ) mask
-chanstring  =  %x01-07 / %x08-09 / %x0B-0C / %x0E-1F / %x21-2B
-chanstring  / %x2D-39 / %x3B-FF
-channelid   = 5( %x41-5A / DIGIT )
-nospcrlfcl  =  %x01-09 / %x0B-0C / %x0E-1F / %x21-39 / %x3B-FF
-    ; any octet  except NUL, CR, LF, ' ' and ':'
+
 middle      =  nospcrlfcl *( ':' / nospcrlfcl )
 trailing    =  *( ':' / ' ' / nospcrlfcl )
+
 crlf        =  CR LF
+nospcrlfcl  =  %x01-09 / %x0B-0C / %x0E-1F / %x21-39 / %x3B-FF
+    ; any octet  except NUL, CR, LF, ' ' and ':'
 special     =  %x5B-60 / %x7B-7D
     ; '[', '', '\', '`', '_', '^', '{', '|', '']}
-
-mask       =  *( nowild / noesc wildone / noesc wildmany )
-wildone    =  %x3F
-wildmany   =  %x2A
-nowild     =  %x01-29 / %x2B-3E / %x40-FF
-    ; any octet except NUL, "*", "?"
-noesc      =  %x01-5B / %x5D-FF
-    ; any octet except NUL and "\"
-matchone   =  %x01-FF
-    ; matches wildone
-matchmany  =  *matchone
-    ; matches wildmany
-

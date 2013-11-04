@@ -1,0 +1,31 @@
+prefix      =  servername / ( nickname [ [ '!' username ] '@' host ] )
+
+target      =  nickname / servername
+msgtarget   =  msgto *( ',' msgto )
+msgto       =  channel / ( username [ '%' host ] '@' servername )
+msgto       / ( username '%' host ) / targetmask
+msgto       / nickname / ( nickname '!' username '@' host )
+channel     =  ( '#' / '+' / ( '!' channelid ) / '&' ) chanstring [ ':' chanstring ]
+servername  =  hostname
+host        =  hostname / hostaddr
+hostname    =  shortname *( '.' shortname )
+username    =  1*(CHAR)
+shortname   =  ( ALPHA / DIGIT ) *( ALPHA / DIGIT / '-' ) *( ALPHA / DIGIT )
+hostaddr    =  ip4addr / ip6addr
+targetmask  =  ( '$' / '#' ) mask
+chanstring  =  %x01-07 / %x08-09 / %x0B-0C / %x0E-1F / %x21-2B
+chanstring  / %x2D-39 / %x3B-FF
+channelid   = 5( %x41-5A / DIGIT )
+
+mask       =  *( nowild / noesc wildone / noesc wildmany )
+wildone    =  %x3F
+wildmany   =  %x2A
+nowild     =  %x01-29 / %x2B-3E / %x40-FF
+    ; any octet except NUL, "*", "?"
+noesc      =  %x01-5B / %x5D-FF
+    ; any octet except NUL and "\"
+matchone   =  %x01-FF
+    ; matches wildone
+matchmany  =  *matchone
+    ; matches wildmany
+
