@@ -54,9 +54,10 @@
                      (= cmd "nick") (save-target!
                                       targets
                                    {:name param :ips [(:address client-info)]})
-                     (= cmd "mode") (enqueue ch "221 +i")
-                     (= cmd "whois") (enqueue ch "331 nick user host * :realname")
-                     (= cmd "privmsg") (println parsed)
+                     (= cmd "mode") (enqueue ch "<mode> not supported")
+                     (= cmd "whois") (enqueue ch "<whois> not supported")
+                     (= cmd "privmsg") (enqueue ch
+            ":gideonite PRIVMSG gideon :are you there?")
                      :else (do (println "unhandled " cmd)
                              (enqueue ch "001")))))))
 

@@ -15,6 +15,7 @@
      :command (keyword->concat :command)
      :middle #(apply str %&)
      :trailing (keyword->concat :trailing)
+     :nickname (keyword->concat :nickname)
      :SP identity
      :CR identity
      :nospcrlfcl identity
@@ -24,6 +25,8 @@
        string)))
 
 (comment
+  (request-parser ":gideonite PRIVMSG gideon :are you there?\r\n")
+
   (request-parser "NICK gideon\r\n")
   (request-parser "USER gideon gideon localhost :Gideon\r\n")
   (request-parser "join #foobar\r\n")
