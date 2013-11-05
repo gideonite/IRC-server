@@ -47,15 +47,18 @@
   (receive-all ch
                (fn [msg]
                  (let [parsed (request-parser (str msg "\r\n"))
+                       cmd (lower-case (second (second parsed)))
                        param (second (first
                                       (filter #(= :params (first %)) (rest parsed))))]
-                   (if (= (lower-case (second (second parsed))) "nick")
-                     (save-target! targets {:name param :ips [(:address client-info)]})
-                     ))
-                 (println targets)
-                 (println client-info)
-
-                 (enqueue ch "001"))))
+                   (cond
+                     (= cmd "nick") (save-target!
+                                      targets
+                                   {:name param :ips [(:address client-info)]})
+                     (= cmd "mode") (enqueue ch "221 +i")
+                     (= cmd "whois") (enqueue ch "331 nick user host * :realname")
+                     (= cmd "privmsg") (println parsed)
+                     :else (do (println "unhandled " cmd)
+                             (enqueue ch "001")))))))
 
 (defn start-server
   [port]

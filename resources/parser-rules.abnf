@@ -1,7 +1,7 @@
 message     =  [ ':' prefix <SP> ] command [ params ] <crlf>
 prefix      =  nickname
 command     =  1*ALPHA / 3DIGIT
-params      =  *14( <1*SP> middle ) [ <SP> ':' trailing ]
+params      =  *14( <1*SP> middle ) [ <SP> <':'> trailing ]
             /  14( <SP> middle ) [ <SP> [ ':' ] trailing ]
 
 nickname    =  ( ALPHA / special ) *8( ALPHA / DIGIT / special / '-' )

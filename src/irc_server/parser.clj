@@ -27,7 +27,7 @@
   (request-parser "NICK gideon\r\n")
   (request-parser "USER gideon gideon localhost :Gideon\r\n")
   (request-parser "join #foobar\r\n")
-  (request-parser "msg puddytat Hey tat, how are you?\r\n")
+  (request-parser "PRIVMSG puddytat :Hey tat, how are you?\r\n")
   (request-parser "NOTICE gideonite wake up\r\n")
   (request-parser "part\r\n")
   (request-parser "partall\r\n")
