@@ -39,25 +39,46 @@
   (by-name targets "foobar")
   (by-name targets "#foobar"))
 
+
 ;;
 ;; HANDLERS
 ;;
 
+(def targets (atom {}))
+
+(defn register!
+  ([ch] (when-not (@targets ch) (swap! targets assoc ch {:channel ch})))
+  ([ch attrs] (if-let [info (@targets ch)]
+                (swap! targets assoc ch (merge info attrs))
+                (swap! targets assoc ch attrs))))
+
 (defn handler [ch client-info]
+  (register! ch)
+
   (receive-all ch
                (fn [msg]
-                 (let [parsed (request-parser (str msg "\r\n"))
-                       cmd (lower-case (second (second parsed)))
-                       param (second (first
-                                      (filter #(= :params (first %)) (rest parsed))))]
+                 (let [[-message
+                        [-command cmd] [-params p1 p2 p3 & ps] :as parsed]
+                       (request-parser (str msg "\r\n"))
+                       cmd (lower-case cmd)]
                    (cond
-                     (= cmd "nick") (save-target!
-                                      targets
-                                   {:name param :ips [(:address client-info)]})
+                     (= cmd "user") (let [[[-trailing trailing]] ps
+                                          user-name p1
+                                          nick p2
+                                          host p3
+                                          real-name trailing]
+                                      (register! ch
+                                                 {:user user-name
+                                                  :nick nick
+                                                  :host host
+                                                  :real-name real-name})
+                                      (enqueue ch "001"))
+                     (= cmd "nick") (do
+                                      (register! ch {:nick p1})
+                                      (enqueue ch "001"))
                      (= cmd "mode") (enqueue ch "<mode> not supported")
                      (= cmd "whois") (enqueue ch "<whois> not supported")
-                     (= cmd "privmsg") (enqueue ch
-            ":gideonite PRIVMSG gideon :are you there?")
+                     (= cmd "privmsg") (comment p1)
                      :else (do (println "unhandled " cmd)
                              (enqueue ch "001")))))))
 
