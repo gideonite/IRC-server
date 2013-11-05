@@ -13,7 +13,7 @@
   (insta/transform
     {:ALPHA identity
      :command (keyword->concat :command)
-     :middle (keyword->concat :middle)
+     :middle #(apply str %&)
      :trailing (keyword->concat :trailing)
      :SP identity
      :CR identity

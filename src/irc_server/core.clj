@@ -2,7 +2,8 @@
   (:require [irc-server.parser :refer :all]
             [aleph.tcp :refer :all]
             [lamina.core :refer :all]
-            [gloss.core :refer :all]))
+            [gloss.core :refer :all]
+            [clojure.string :refer [lower-case]]))
 
 
 ;; A target is a map {:ips [ips] :name name/channel}
@@ -33,8 +34,8 @@
 (def targets (temporary-targets))
 
 (comment
-  (save-target! targets {:ip ["172.0.0.1"] :name "foobar"})
-  (save-target! targets {:ip ["123" "456.1"] :name "#foobar"})
+  (save-target! targets {:ips ["172.0.0.1"] :name "foobar"})
+  (save-target! targets {:ips ["123" "456.1"] :name "#foobar"})
   (by-name targets "foobar")
   (by-name targets "#foobar"))
 
@@ -42,10 +43,18 @@
 ;; HANDLERS
 ;;
 
-(defn handler [ch target-info]
+(defn handler [ch client-info]
   (receive-all ch
                (fn [msg]
-                 (println (request-parser (str msg "\r\n")))
+                 (let [parsed (request-parser (str msg "\r\n"))
+                       param (second (first
+                                      (filter #(= :params (first %)) (rest parsed))))]
+                   (if (= (lower-case (second (second parsed))) "nick")
+                     (save-target! targets {:name param :ips [(:address client-info)]})
+                     ))
+                 (println targets)
+                 (println client-info)
+
                  (enqueue ch "001"))))
 
 (defn start-server
