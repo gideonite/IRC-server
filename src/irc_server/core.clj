@@ -5,44 +5,44 @@
             [gloss.core :refer :all]))
 
 
-;; A client is a map {:ip :nick}
+;; A target is a map {:ips [ips] :name name/channel}
 
-(defprotocol IPersistClients
-  (save-client! [store client])
-  (get-client [store client])
-  (get-nick [store nick])
+(defprotocol IPersistTargets
+  (save-target! [store target])
+  (by-name [store name])
   )
 
 ;;
-;; TEMPORARY CLIENTS
+;; TEMPORARY TARGETS
 ;;
-;; This is a memory store for client records, an (atom {:nick :client})
+;; This is an in memory store for target records, an (atom {:name :target}).
+;; I.e. you look up by name (name/channel).
 
-(defrecord TemporaryClients
+(defrecord TemporaryTargets
   [!cache])
 
-(defn temporary-clients []
-  (->TemporaryClients (atom {})))
+(defn temporary-targets []
+  (->TemporaryTargets (atom {})))
 
-(extend-type TemporaryClients
-  IPersistClients
-  (save-client! [store client]
-    (swap! (:!cache store) assoc (:nick client) client))
-  (get-client [store client] (@(:!cache store) (:nick client)))
-  (get-nick [store nick] (@(:!cache store) nick)))
+(extend-type TemporaryTargets
+  IPersistTargets
+  (save-target! [store target]
+    (swap! (:!cache store) assoc (:name target) target))
+  (by-name [store name] (@(:!cache store) name)))
 
-(def clients (temporary-clients))
+(def targets (temporary-targets))
 
-#_
-(save-client! clients {:ip 172 :nick "foobar"})
-(get-client clients {:ip 172 :nick "foobar"})
-(get-nick clients "foobar")
+(comment
+  (save-target! targets {:ip ["172.0.0.1"] :name "foobar"})
+  (save-target! targets {:ip ["123" "456.1"] :name "#foobar"})
+  (by-name targets "foobar")
+  (by-name targets "#foobar"))
 
 ;;
 ;; HANDLERS
 ;;
 
-(defn handler [ch client-info]
+(defn handler [ch target-info]
   (receive-all ch
                (fn [msg]
                  (println (request-parser (str msg "\r\n")))
