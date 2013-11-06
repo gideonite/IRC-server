@@ -79,16 +79,21 @@
                         [-command cmd] [-params p1 p2 p3 & ps] :as parsed]
                        (request-parser (str msg "\r\n"))
                        cmd (lower-case cmd)]
+
+                   (try (dispatch-handler ch parsed)
+                     (catch Exception e
+                       (println
+                         "command not found "
+                         (last (clojure.string/split (.getMessage e)  #" ")))))
+
                    (cond
                      (= cmd "ping") (enqueue ch "pong")
-                     (= cmd "user") (dispatch-handler ch parsed)
-                     (= cmd "nick") (dispatch-handler ch parsed)
                      (= cmd "mode") (enqueue ch "<mode> not supported")
                      (= cmd "whois") (enqueue ch "<whois> not supported")
                      (= cmd "privmsg") (let [[-trailing message] p2
                                              src (get @targets ch)
                                              target-nick p1])
-                     :else (do (println "unhandled " cmd)
+                     :else (do (println "unhandled by cond" cmd)
                              (enqueue ch "001")))))))
 
 (defn start-server
