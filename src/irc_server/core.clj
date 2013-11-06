@@ -39,14 +39,15 @@
                                                  {:user user-name
                                                   :nick nick
                                                   :host host
-                                                  :real-name real-name})
-                                      (enqueue ch "001"))
+                                                  :real-name real-name}))
                      (= cmd "nick") (do
                                       (register! ch {:nick p1})
                                       (enqueue ch "001"))
                      (= cmd "mode") (enqueue ch "<mode> not supported")
                      (= cmd "whois") (enqueue ch "<whois> not supported")
-                     (= cmd "privmsg") (comment p1)
+                     (= cmd "privmsg") (let [[-trailing message] p2
+                                             src (get @targets ch)
+                                             target-nick p1])
                      :else (do (println "unhandled " cmd)
                              (enqueue ch "001")))))))
 
