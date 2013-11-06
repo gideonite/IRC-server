@@ -20,7 +20,9 @@
   ([ch] (when-not (@targets ch) (swap! targets assoc ch {:channel ch}))
    (println "registered " ch))
   ([ch attrs] (if-let [info (@targets ch)]
-                (swap! targets assoc ch (merge info attrs))
+                (do
+                  (when-let [nick (:nick info)] (swap! targets assoc nick ch))
+                  (swap! targets assoc ch (merge info attrs)))
                 (swap! targets assoc ch attrs))
    (println "registered " attrs " on " ch)))
 
@@ -50,20 +52,12 @@
   (let [[[-params nick]] (params parsed-msg)]
     (register! ch {:nick nick})))
 
-(comment
-  (dispatcher 'ch (request-parser "nick gideon\r\n"))
-  (dispatcher 'ch (request-parser ":gideonite PRIVMSG gideon :are you there?\r\n"))
-  (dispatcher 'ch (request-parser "join #foobar\r\n"))
-  (dispatcher 'ch (request-parser "PRIVMSG puddytat :Hey tat, how are you?\r\n"))
-  (dispatcher 'ch (request-parser "USER gideon gideon localhost :Gideon\r\n"))
-  (dispatcher 'ch (request-parser "NOTICE gideonite wake up\r\n")))
-
-(comment
-  (dispatch-handler (channel)
-                    (request-parser "UNDEFINED gideonite wake up\r\n"))
-
-  (dispatch-handler (channel)
-                    (request-parser "USER gideon gideon localhost :Gideon\r\n")))
+(defmethod dispatch-handler :PRIVMSG [ch parsed-msg]
+  (let [[[-params target-nick [-trailing msg]]] (params parsed-msg)
+        src (get @targets ch)
+        target-ch (get @targets target-nick)
+        out (str (:nick src) ": PRIVMSG " target-nick " :" msg)]
+    (when target-ch (enqueue target-ch out))))
 
 (defn main-handler [ch client-info]
   (receive-all ch dispatch-handler))
@@ -90,9 +84,6 @@
                      (= cmd "ping") (enqueue ch "pong")
                      (= cmd "mode") (enqueue ch "<mode> not supported")
                      (= cmd "whois") (enqueue ch "<whois> not supported")
-                     (= cmd "privmsg") (let [[-trailing message] p2
-                                             src (get @targets ch)
-                                             target-nick p1])
                      :else (do (println "unhandled by cond" cmd)
                              (enqueue ch "001")))))))
 
@@ -101,3 +92,20 @@
   (start-tcp-server handler
                     {:port port
                      :frame (string :ascii :delimiters ["\r\n"])}))
+
+(user/restart)
+
+(comment
+  (dispatcher 'ch (request-parser "nick gideon\r\n"))
+  (dispatcher 'ch (request-parser ":gideonite PRIVMSG gideon :are you there?\r\n"))
+  (dispatcher 'ch (request-parser "join #foobar\r\n"))
+  (dispatcher 'ch (request-parser "PRIVMSG puddytat :Hey tat, how are you?\r\n"))
+  (dispatcher 'ch (request-parser "USER gideon gideon localhost :Gideon\r\n"))
+  (dispatcher 'ch (request-parser "NOTICE gideonite wake up\r\n")))
+
+(comment
+  (dispatch-handler (channel)
+                    (request-parser "UNDEFINED gideonite wake up\r\n"))
+
+  (dispatch-handler (channel)
+                    (request-parser "USER gideon gideon localhost :Gideon\r\n")))
