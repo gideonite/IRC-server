@@ -3,7 +3,7 @@
             [aleph.tcp :refer :all]
             [lamina.core :refer :all]
             [gloss.core :refer :all]
-            [clojure.string :refer [lower-case]]))
+            [clojure.string :refer [lower-case upper-case]]))
 
 ;;
 ;; HANDLERS
@@ -11,18 +11,68 @@
 
 (def targets (atom {}))
 
-
-;; TODO: use multimethods to dispath register on the command type
-
 (defn register!
-  ([ch] (when-not (@targets ch) (swap! targets assoc ch {:channel ch})))
+  "[ch] if the ch is not registered, register it without any attribute data
+
+  [chr attrs] if ch is not registered, register with the attrs.  If it is
+  registered, overwright whatever attributes are provided in `attrs`.
+  "
+  ([ch] (when-not (@targets ch) (swap! targets assoc ch {:channel ch}))
+   (println "registered " ch))
   ([ch attrs] (if-let [info (@targets ch)]
                 (swap! targets assoc ch (merge info attrs))
-                (swap! targets assoc ch attrs))))
+                (swap! targets assoc ch attrs))
+   (println "registered " attrs " on " ch)))
+
+(defn registered?
+  [key]
+  (nil? (@targets key)))
+
+(defn dispatcher
+  [_ parsed-msg]
+  (->> (rest parsed-msg)
+    (filter #(= :command (first %)))
+    (first)
+    (second)
+    (upper-case)
+    (keyword)))
+
+(defn params [parsed-msg]
+  (filter #(= :params (first %)) (rest parsed-msg)))
+
+(defmulti dispatch-handler dispatcher)
+
+(defmethod dispatch-handler :USER [ch parsed-msg]
+  (let [[[-params user nick host [-trailing real-name]]] (params parsed-msg)]
+    (register! ch {:user user :nick nick :host host :real-name real-name})))
+
+(defmethod dispatch-handler :NICK [ch parsed-msg]
+  (let [[[-params nick]] (params parsed-msg)]
+    (register! ch {:nick nick})))
+
+(comment
+  (dispatcher 'ch (request-parser "nick gideon\r\n"))
+  (dispatcher 'ch (request-parser ":gideonite PRIVMSG gideon :are you there?\r\n"))
+  (dispatcher 'ch (request-parser "join #foobar\r\n"))
+  (dispatcher 'ch (request-parser "PRIVMSG puddytat :Hey tat, how are you?\r\n"))
+  (dispatcher 'ch (request-parser "USER gideon gideon localhost :Gideon\r\n"))
+  (dispatcher 'ch (request-parser "NOTICE gideonite wake up\r\n")))
+
+(comment
+  (dispatch-handler (channel)
+                    (request-parser "UNDEFINED gideonite wake up\r\n"))
+
+  (dispatch-handler (channel)
+                    (request-parser "USER gideon gideon localhost :Gideon\r\n")))
+
+(defn main-handler [ch client-info]
+  (receive-all ch dispatch-handler))
+
+;;
+;;
 
 (defn handler [ch client-info]
-  (register! ch)
-
+  (enqueue ch "001")
   (receive-all ch
                (fn [msg]
                  (let [[-message
@@ -30,19 +80,9 @@
                        (request-parser (str msg "\r\n"))
                        cmd (lower-case cmd)]
                    (cond
-                     (= cmd "user") (let [[[-trailing trailing]] ps
-                                          user-name p1
-                                          nick p2
-                                          host p3
-                                          real-name trailing]
-                                      (register! ch
-                                                 {:user user-name
-                                                  :nick nick
-                                                  :host host
-                                                  :real-name real-name}))
-                     (= cmd "nick") (do
-                                      (register! ch {:nick p1})
-                                      (enqueue ch "001"))
+                     (= cmd "ping") (enqueue ch "pong")
+                     (= cmd "user") (dispatch-handler ch parsed)
+                     (= cmd "nick") (dispatch-handler ch parsed)
                      (= cmd "mode") (enqueue ch "<mode> not supported")
                      (= cmd "whois") (enqueue ch "<whois> not supported")
                      (= cmd "privmsg") (let [[-trailing message] p2

@@ -1,4 +1,4 @@
-message     =  [ ':' prefix <SP> ] command [ params ] <crlf>
+message     =  [ <':'> prefix <SP> ] command [ params ] <crlf>
 prefix      =  nickname
 command     =  1*ALPHA / 3DIGIT
 params      =  *14( <1*SP> middle ) [ <SP> <':'> trailing ]
