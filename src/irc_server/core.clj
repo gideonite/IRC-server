@@ -18,6 +18,8 @@
     (keyword)))
 
 (defn params [parsed-msg]
+  "returns the params vector in a parsed message.  Includes the keyword
+  :params."
   (filter #(= :params (first %)) (rest parsed-msg)))
 
 (defmulti dispatch-handler dispatcher)
