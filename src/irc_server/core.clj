@@ -8,6 +8,10 @@
 (def ch->user (atom {}))
 (def nick->ch (atom {}))
 
+(def codes {:RPL_NAMREPLY 353
+            :RPL_ENDOFNAMES 366
+            })
+
 (defn dispatcher
   [_ parsed-msg]
   (->> (rest parsed-msg)
@@ -46,12 +50,36 @@
 
 (defmethod dispatch-handler :JOIN [src-ch parsed-msg]
   (let [[[-params ch-name]] (params parsed-msg)]
-    (let [user (@ch->user src-ch)]
-      (if-let [nicks (get @ch-name->nicks ch-name)]
-        (comment "message everyone")
-        (swap! ch-name->nicks assoc ch-name [(:nick user)])
-        ))))
+    (let [user (@ch->user src-ch)
+          get-nicks-in-ch #(@ch-name->nicks ch-name)
+          nicks (get-nicks-in-ch)]
+      (if (seq nicks)
+        ;; add nick to channel
+        (swap! ch-name->nicks assoc ch-name
+               (conj (@ch-name->nicks ch-name) (:nick user)))
 
+        ;; create new channel
+        (swap! ch-name->nicks assoc ch-name [(:nick user)]))
+
+      ;; JOIN message received
+      (enqueue src-ch
+               (str (codes :RPL_NAMREPLY) " :" (:nick user) " = "
+                    ch-name
+                    " :" (clojure.string/join " "
+                                              (@ch-name->nicks ch-name))))
+
+      ;; notify everyone in the channel
+      (let [notice (str ":" (:nick user) " JOIN " ch-name)]
+        (doseq [c (map @nick->ch (@ch-name->nicks ch-name))]
+          (enqueue c notice)))
+
+      ;; send list of nicks in channel to client
+      (enqueue src-ch
+               (clojure.string/join " "
+                                    [(codes :RPL_ENDOFNAMES)
+                                     (:nick user)
+                                     ch-name
+                                     ":End of /NAMES list."])))))
 
 (comment
   (do
