@@ -39,12 +39,20 @@
     (swap! nick->ch assoc nick ch)))
 
 (defmethod dispatch-handler :PRIVMSG [src-ch parsed-msg]
-  (let [[[-params target-nick [-trailing msg]]] (params parsed-msg)
+  (let [[[-params target-name [-trailing msg]]] (params parsed-msg)
         src (get @ch->user src-ch)
-        target-ch (get @nick->ch target-nick)
-        out (str ":" (:nick src) "! PRIVMSG " target-nick " :" msg)]
-    (when target-ch
-      (enqueue target-ch out))))
+        target-nick-ch (get @nick->ch target-name)
+        target-channel-chs (map @nick->ch
+                                (get @ch-name->nicks target-name))
+        out (str ":" (:nick src) "! PRIVMSG " target-name " :" msg)]
+
+    (assert (not (and target-nick-ch
+                      target-channel-chs)))
+
+    (when target-nick-ch (enqueue target-nick-ch out))
+    (when target-channel-chs
+      (doseq [c target-channel-chs]
+        (enqueue c out)))))
 
 (def ch-name->nicks (atom {}))
 
