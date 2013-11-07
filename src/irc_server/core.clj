@@ -11,6 +11,10 @@
 
 (def targets (atom {}))
 
+(def ch->user (atom {}))
+(def nick->ch (atom {}))
+
+#_
 (defn register!
   "[ch] if the ch is not registered, register it without any attribute data
 
@@ -46,20 +50,33 @@
 
 (defmethod dispatch-handler :USER [ch parsed-msg]
   (let [[[-params user nick host [-trailing real-name]]] (params parsed-msg)]
-    (register! ch {:user user :nick nick :host host :real-name real-name})))
+    (swap! nick->ch assoc nick ch)
+    (swap! ch->user assoc ch {:user user :nick nick :host host :real-name real-name})))
 
 (defmethod dispatch-handler :NICK [ch parsed-msg]
-  (let [[[-params nick]] (params parsed-msg)]
-    (register! ch {:nick nick})))
+  (let [[[-params nick]] (params parsed-msg)
+        u (get @ch->user ch {})]
+    (swap! nick->ch assoc nick ch)))
 
-(defmethod dispatch-handler :PRIVMSG [src-ch parsed-msg]
-  (let [[[-params target-nick [-trailing msg]]] (params parsed-msg)
-        src (get @targets src-ch)
-        target-ch (get @targets target-nick)
-        out (str ":" (:nick src) "! PRIVMSG " target-nick " :" msg)]
-    (println (get @targets target-ch))
-    (when target-ch
-      (enqueue target-ch out))))
+(comment
+  (do
+    (reset! ch->user {})
+    (reset! nick->ch {})
+
+    (dispatch-handler (channel)
+                      (request-parser "NICK gideon\r\n"))
+    (dispatch-handler (channel)
+                      (request-parser "USER gideon gideon localhost :Gideon\r\n")))
+  )
+
+;(defmethod dispatch-handler :PRIVMSG [src-ch parsed-msg]
+;  (let [[[-params target-nick [-trailing msg]]] (params parsed-msg)
+;        src (get @targets src-ch)
+;        target-ch (get @targets target-nick)
+;        out (str ":" (:nick src) "! PRIVMSG " target-nick " :" msg)]
+;    (println (get @targets target-ch))
+;    (when target-ch
+;      (enqueue target-ch out))))
 
 (defn main-handler [ch client-info]
   (receive-all ch dispatch-handler))
