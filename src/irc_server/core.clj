@@ -34,6 +34,25 @@
         u (get @ch->user ch {})]
     (swap! nick->ch assoc nick ch)))
 
+(defmethod dispatch-handler :PRIVMSG [src-ch parsed-msg]
+  (let [[[-params target-nick [-trailing msg]]] (params parsed-msg)
+        src (get @ch->user src-ch)
+        target-ch (get @nick->ch target-nick)
+        out (str ":" (:nick src) "! PRIVMSG " target-nick " :" msg)]
+    (when target-ch
+      (enqueue target-ch out))))
+
+(def ch-name->nicks (atom {}))
+
+(defmethod dispatch-handler :JOIN [src-ch parsed-msg]
+  (let [[[-params ch-name]] (params parsed-msg)]
+    (let [user (@ch->user src-ch)]
+      (if-let [nicks (get @ch-name->nicks ch-name)]
+        (comment "message everyone")
+        (swap! ch-name->nicks assoc ch-name [(:nick user)])
+        ))))
+
+
 (comment
   (do
     (reset! ch->user {})
@@ -44,14 +63,6 @@
     (dispatch-handler (channel)
                       (request-parser "USER gideon gideon localhost :Gideon\r\n")))
   )
-
-(defmethod dispatch-handler :PRIVMSG [src-ch parsed-msg]
-  (let [[[-params target-nick [-trailing msg]]] (params parsed-msg)
-        src (get @ch->user src-ch)
-        target-ch (get @nick->ch target-nick)
-        out (str ":" (:nick src) "! PRIVMSG " target-nick " :" msg)]
-    (when target-ch
-      (enqueue target-ch out))))
 
 (defn main-handler [ch client-info]
   (receive-all ch dispatch-handler))
