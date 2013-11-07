@@ -5,34 +5,8 @@
             [gloss.core :refer :all]
             [clojure.string :refer [lower-case upper-case]]))
 
-;;
-;; HANDLERS
-;;
-
-(def targets (atom {}))
-
 (def ch->user (atom {}))
 (def nick->ch (atom {}))
-
-#_
-(defn register!
-  "[ch] if the ch is not registered, register it without any attribute data
-
-  [chr attrs] if ch is not registered, register with the attrs.  If it is
-  registered, overwright whatever attributes are provided in `attrs`.
-  "
-  ([ch] (when-not (@targets ch) (swap! targets assoc ch {:channel ch}))
-   (println "registered " ch))
-  ([ch attrs] (if-let [info (@targets ch)]
-                (do
-                  (when-let [nick (:nick info)] (swap! targets assoc nick ch))
-                  (swap! targets assoc ch (merge info attrs)))
-                (swap! targets assoc ch attrs))
-   (println "registered " attrs " on " ch)))
-
-(defn registered?
-  [key]
-  (nil? (@targets key)))
 
 (defn dispatcher
   [_ parsed-msg]
