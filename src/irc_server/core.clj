@@ -69,14 +69,13 @@
                       (request-parser "USER gideon gideon localhost :Gideon\r\n")))
   )
 
-;(defmethod dispatch-handler :PRIVMSG [src-ch parsed-msg]
-;  (let [[[-params target-nick [-trailing msg]]] (params parsed-msg)
-;        src (get @targets src-ch)
-;        target-ch (get @targets target-nick)
-;        out (str ":" (:nick src) "! PRIVMSG " target-nick " :" msg)]
-;    (println (get @targets target-ch))
-;    (when target-ch
-;      (enqueue target-ch out))))
+(defmethod dispatch-handler :PRIVMSG [src-ch parsed-msg]
+  (let [[[-params target-nick [-trailing msg]]] (params parsed-msg)
+        src (get @ch->user src-ch)
+        target-ch (get @nick->ch target-nick)
+        out (str ":" (:nick src) "! PRIVMSG " target-nick " :" msg)]
+    (when target-ch
+      (enqueue target-ch out))))
 
 (defn main-handler [ch client-info]
   (receive-all ch dispatch-handler))
