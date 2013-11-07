@@ -6,7 +6,7 @@
 (defn start []
   (if @server
     (println "already started")
-    (let [port 1234]
+    (let [port 6667]
       (println "initializing server on port " port)
       (swap! server (fn [_] (irc/start-server port))))))
 
