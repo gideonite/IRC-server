@@ -52,12 +52,14 @@
   (let [[[-params nick]] (params parsed-msg)]
     (register! ch {:nick nick})))
 
-(defmethod dispatch-handler :PRIVMSG [ch parsed-msg]
+(defmethod dispatch-handler :PRIVMSG [src-ch parsed-msg]
   (let [[[-params target-nick [-trailing msg]]] (params parsed-msg)
-        src (get @targets ch)
+        src (get @targets src-ch)
         target-ch (get @targets target-nick)
-        out (str (:nick src) ": PRIVMSG " target-nick " :" msg)]
-    (when target-ch (enqueue target-ch out))))
+        out (str ":" (:nick src) "! PRIVMSG " target-nick " :" msg)]
+    (println (get @targets target-ch))
+    (when target-ch
+      (enqueue target-ch out))))
 
 (defn main-handler [ch client-info]
   (receive-all ch dispatch-handler))
