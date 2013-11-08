@@ -7,9 +7,15 @@
 
 (def ch->user (atom {}))
 (def nick->ch (atom {}))
+(def ch-name->nicks (atom {}))
 
 (def codes {:RPL_NAMREPLY 353
             :RPL_ENDOFNAMES 366
+            :RPL_WHOISUSER 311
+            :RPL_WELCOME 001
+            :ERR_NOSUCHNICK 401
+            :RPL_UMODEIS 221
+            :RPL_ENDOFWHOIS 318
             })
 
 (defn dispatcher
@@ -31,12 +37,16 @@
 (defmethod dispatch-handler :USER [ch parsed-msg]
   (let [[[-params user nick host [-trailing real-name]]] (params parsed-msg)]
     (swap! nick->ch assoc nick ch)
-    (swap! ch->user assoc ch {:user user :nick nick :host host :real-name real-name})))
+    (swap! ch->user assoc ch {:user user :nick nick :host host :real-name real-name})
+    (enqueue ch (str (codes :RPL_WELCOME) nick "!" user "@" host))))
 
 (defmethod dispatch-handler :NICK [ch parsed-msg]
   (let [[[-params nick]] (params parsed-msg)
         u (get @ch->user ch {})]
-    (swap! nick->ch assoc nick ch)))
+    (swap! nick->ch assoc nick ch)
+    (enqueue ch (str (codes :RPL_WELCOME) (get u :nick "")
+                     "!" (get u :user "")
+                     "@" (get u :host "")))))
 
 (defmethod dispatch-handler :PRIVMSG [src-ch parsed-msg]
   (let [[[-params target-name [-trailing msg]]] (params parsed-msg)
@@ -53,8 +63,6 @@
     (when target-channel-chs
       (doseq [c target-channel-chs]
         (enqueue c out)))))
-
-(def ch-name->nicks (atom {}))
 
 (defmethod dispatch-handler :JOIN [src-ch parsed-msg]
   (let [[[-params ch-name]] (params parsed-msg)]
@@ -89,6 +97,33 @@
                                      ch-name
                                      ":End of /NAMES list."])))))
 
+#_(defmethod dispatch-handler :PING [ch parsed-msg]
+  (let [user (ch->user ch)]
+    (enqueue ch (str "PONG " (:host user)))))
+
+(defmethod dispatch-handler :WHOIS [ch parsed-msg]
+  (let [[[-params nick]] (params parsed-msg)
+        user (@ch->user (@nick->ch nick))]
+
+    (enqueue ch (clojure.string/join " " [(codes :RPL_WHOISUSER)
+                                          (:nick (@ch->user ch))
+                                          (:nick user)
+                                          (:user user)
+                                          (:host user)
+                                          "*"
+                                          (str ":" (:real-name user))]))
+
+    (enqueue ch (clojure.string/join " " [(codes :RPL_ENDOFWHOIS)
+                                          (:nick (@ch->user ch))
+                                          (:nick user)
+                                          ":End of /WHOIS list." ]))
+    ))
+
+#_(defmethod dispatch-handler :MODE [ch parsed-msg]
+  (let [[[-params mode]] (params parsed-msg)
+        user  (ch->user ch)]
+    (enqueue ch (clojure.string/join " " [(:user user) mode]))))
+
 (comment
   (do
     (reset! ch->user {})
@@ -121,20 +156,13 @@
                          "command not found "
                          (last (clojure.string/split (.getMessage e)  #" ")))))
 
-                   (cond
-                     (= cmd "ping") (enqueue ch "pong")
-                     (= cmd "mode") (enqueue ch "<mode> not supported")
-                     (= cmd "whois") (enqueue ch "<whois> not supported")
-                     :else (do (println "unhandled by cond" cmd)
-                             (enqueue ch "001")))))))
+                   (enqueue ch "001")))))
 
 (defn start-server
   [port]
   (start-tcp-server handler
                     {:port port
                      :frame (string :ascii :delimiters ["\r\n"])}))
-
-(user/restart)
 
 (comment
   (dispatcher 'ch (request-parser "nick gideon\r\n"))
@@ -150,3 +178,5 @@
 
   (dispatch-handler (channel)
                     (request-parser "USER gideon gideon localhost :Gideon\r\n")))
+
+(user/restart)
