@@ -16,6 +16,7 @@
             :ERR_NOSUCHNICK 401
             :RPL_UMODEIS 221
             :RPL_ENDOFWHOIS 318
+            :ERR_ALREADYREGISTRED 462
             })
 
 (defn dispatcher
@@ -35,18 +36,23 @@
 (defmulti dispatch-handler dispatcher)
 
 (defmethod dispatch-handler :USER [ch parsed-msg]
-  (let [[[-params user nick host [-trailing real-name]]] (params parsed-msg)]
-    (swap! nick->ch assoc nick ch)
-    (swap! ch->user assoc ch {:user user :nick nick :host host :real-name real-name})
-    (enqueue ch (str (codes :RPL_WELCOME) nick "!" user "@" host))))
+  (let [[[-params user -user url [-trailing real-name]]] (params parsed-msg)]
+    (if (not (nil? (:user (@ch->user user))))
+      (enqueue ch (clojure.string/join " "
+                                       (codes :ERR_ALREADYREGISTRED)
+                                       ":Unauthorized command (already registered"))
+      (let [u (get @ch->user ch {})]
+        (swap! ch->user
+               assoc ch (assoc u :user user :real-name real-name))))))
 
 (defmethod dispatch-handler :NICK [ch parsed-msg]
   (let [[[-params nick]] (params parsed-msg)
         u (get @ch->user ch {})]
     (swap! nick->ch assoc nick ch)
-    (enqueue ch (str (codes :RPL_WELCOME) (get u :nick "")
-                     "!" (get u :user "")
-                     "@" (get u :host "")))))
+    (swap! ch->user assoc ch (assoc u :nick nick))
+    (enqueue ch (str (codes :RPL_WELCOME) " " nick " "
+                  ":welcome to irc "
+                  nick))))
 
 (defmethod dispatch-handler :PRIVMSG [src-ch parsed-msg]
   (let [[[-params target-name [-trailing msg]]] (params parsed-msg)
@@ -122,7 +128,9 @@
   (let [[[-params mode]] (params parsed-msg)
         user  (@ch->user ch)]
     (enqueue ch (clojure.string/join " " [(codes :RPL_UMODEIS)
+                                       "MODE"
                                        (:user (@ch->user ch))
+                                       ":"
                                        mode]))))
 
 (comment
