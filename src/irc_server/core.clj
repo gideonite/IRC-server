@@ -116,13 +116,14 @@
     (enqueue ch (clojure.string/join " " [(codes :RPL_ENDOFWHOIS)
                                           (:nick (@ch->user ch))
                                           (:nick user)
-                                          ":End of /WHOIS list." ]))
-    ))
+                                          ":End of /WHOIS list." ]))))
 
-#_(defmethod dispatch-handler :MODE [ch parsed-msg]
+(defmethod dispatch-handler :MODE [ch parsed-msg]
   (let [[[-params mode]] (params parsed-msg)
-        user  (ch->user ch)]
-    (enqueue ch (clojure.string/join " " [(:user user) mode]))))
+        user  (@ch->user ch)]
+    (enqueue ch (clojure.string/join " " [(codes :RPL_UMODEIS)
+                                       (:user (@ch->user ch))
+                                       mode]))))
 
 (comment
   (do
