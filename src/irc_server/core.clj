@@ -5,6 +5,10 @@
             [gloss.core :refer :all]
             [clojure.string :refer [lower-case upper-case]]))
 
+;;
+;; STATE
+;;
+
 (def ch->user (atom {}))
 (def nick->ch (atom {}))
 (def ch-name->nicks (atom {}))
@@ -20,6 +24,8 @@
             })
 
 (defn dispatcher
+  "grabs the command from a parsed message, returning the command in all caps.
+  Used to dispatch in dispatch-handler."
   [_ parsed-msg]
   (->> (rest parsed-msg)
     (filter #(= :command (first %)))
@@ -34,6 +40,11 @@
   (filter #(= :params (first %)) (rest parsed-msg)))
 
 (defmulti dispatch-handler dispatcher)
+
+;;
+;; HANDLERS
+;;
+;; Dispatch on the message's command.
 
 (defmethod dispatch-handler :USER [ch parsed-msg]
   (let [[[-params user -user url [-trailing real-name]]] (params parsed-msg)]
@@ -103,10 +114,6 @@
                                      ch-name
                                      ":End of /NAMES list."])))))
 
-#_(defmethod dispatch-handler :PING [ch parsed-msg]
-  (let [user (ch->user ch)]
-    (enqueue ch (str "PONG " (:host user)))))
-
 (defmethod dispatch-handler :WHOIS [ch parsed-msg]
   (let [[[-params nick]] (params parsed-msg)
         user (@ch->user (@nick->ch nick))]
@@ -133,38 +140,17 @@
                                        ":"
                                        mode]))))
 
-(comment
-  (do
-    (reset! ch->user {})
-    (reset! nick->ch {})
-
-    (dispatch-handler (channel)
-                      (request-parser "NICK gideon\r\n"))
-    (dispatch-handler (channel)
-                      (request-parser "USER gideon gideon localhost :Gideon\r\n")))
-  )
-
-(defn main-handler [ch client-info]
-  (receive-all ch dispatch-handler))
-
-;;
-;;
-
-(defn handler [ch client-info]
+(defn handler
+  [ch client-info]
   (enqueue ch "001")
   (receive-all ch
                (fn [msg]
-                 (let [[-message
-                        [-command cmd] [-params p1 p2 p3 & ps] :as parsed]
-                       (request-parser (str msg "\r\n"))
-                       cmd (lower-case cmd)]
-
+                 (let [parsed (request-parser (str msg "\r\n"))]
                    (try (dispatch-handler ch parsed)
                      (catch Exception e
                        (println
                          "command not found "
                          (last (clojure.string/split (.getMessage e)  #" ")))))
-
                    (enqueue ch "001")))))
 
 (defn start-server
@@ -188,4 +174,4 @@
   (dispatch-handler (channel)
                     (request-parser "USER gideon gideon localhost :Gideon\r\n")))
 
-(user/restart)
+#_(user/restart)
