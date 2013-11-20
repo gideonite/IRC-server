@@ -16,7 +16,7 @@
 (def codes {:RPL_NAMREPLY 353
             :RPL_ENDOFNAMES 366
             :RPL_WHOISUSER 311
-            :RPL_WELCOME 001
+            :RPL_WELCOME "001"
             :ERR_NOSUCHNICK 401
             :RPL_UMODEIS 221
             :RPL_ENDOFWHOIS 318
@@ -69,14 +69,16 @@
   (let [[[-params target-name [-trailing msg]]] (params parsed-msg)
         src (get @ch->user src-ch)
         target-nick-ch (get @nick->ch target-name)
-        target-channel-chs (map @nick->ch
-                                (get @ch-name->nicks target-name))
-        out (str ":" (:nick src) "! PRIVMSG " target-name " :" msg)]
+        target-channel-chs (seq (filter #(not= (:nick src) %)
+                                        (map @nick->ch
+                                             (get @ch-name->nicks target-name))))
+        out (str ":" (:nick src) " PRIVMSG " target-name " :" msg)]
 
     (assert (not (and target-nick-ch
                       target-channel-chs)))
 
     (when target-nick-ch (enqueue target-nick-ch out))
+
     (when target-channel-chs
       (doseq [c target-channel-chs]
         (enqueue c out)))))
@@ -137,21 +139,19 @@
     (enqueue ch (clojure.string/join " " [(codes :RPL_UMODEIS)
                                        "MODE"
                                        (:user (@ch->user ch))
-                                       ":"
-                                       mode]))))
+                                       (str ":" mode)]))))
 
 (defn handler
   [ch client-info]
-  (enqueue ch "001")
   (receive-all ch
                (fn [msg]
+                 (println msg)
                  (let [parsed (request-parser (str msg "\r\n"))]
                    (try (dispatch-handler ch parsed)
                      (catch Exception e
                        (println
                          "command not found "
-                         (last (clojure.string/split (.getMessage e)  #" ")))))
-                   (enqueue ch "001")))))
+                         (last (clojure.string/split (.getMessage e)  #" ")))))))))
 
 (defn start-server
   [port]
@@ -174,4 +174,4 @@
   (dispatch-handler (channel)
                     (request-parser "USER gideon gideon localhost :Gideon\r\n")))
 
-#_(user/restart)
+(user/restart)
