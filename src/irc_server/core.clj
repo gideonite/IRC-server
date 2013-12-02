@@ -174,4 +174,4 @@
   (dispatch-handler (channel)
                     (request-parser "USER gideon gideon localhost :Gideon\r\n")))
 
-(user/restart)
+#_(user/restart)
